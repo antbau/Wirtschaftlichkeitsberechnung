@@ -14,6 +14,9 @@ import plotly.express as px
 app = dash.Dash(__name__)
 app.title = "PV Revenue Calculator"
 
+# ⚙️ FIX FOR RENDER: Expose the server variable for Gunicorn
+server = app.server
+
 # Load historical spot market price data
 try:
     df_2021 = pd.read_csv('data/Spotmarktpreis2021.csv', sep=';')
@@ -57,7 +60,6 @@ def preprocess_pv_data(df):
     df_processed.set_index("Time (UTC)", inplace=True)
     df_processed = df_processed.resample('h').sum().reset_index()
     df_processed["Time (CET)"] = df_processed["Time (UTC)"] + pd.Timedelta(hours=1)
-    # Filter for the relevant years
     df_processed = df_processed[df_processed['Time (CET)'].dt.year.isin([2021, 2022, 2023, 2024])]
     return df_processed
 
@@ -110,7 +112,7 @@ def update_output(contents, filename):
         
         for year in sorted(df_pv['Time (CET)'].dt.year.unique()):
             if year not in price_dfs:
-                continue # Skip if no price data is available for the year
+                continue
 
             df_pv_year = df_pv[df_pv['Time (CET)'].dt.year == year]
             df_price_year = price_dfs[year]
@@ -121,7 +123,6 @@ def update_output(contents, filename):
             if total_production == 0:
                 continue
 
-            # --- Calculations for the year ---
             revenue_spotmarket = (df_merged['Yield (kwH)'] * df_merged['Spotmarktpreis in ct/kWh']).sum() / 100
             specific_revenue_spotmarket = (revenue_spotmarket / total_production * 100).round(2)
 
@@ -145,10 +146,8 @@ def update_output(contents, filename):
         if not yearly_results:
              return html.Div("Fehler: Konnte keine Ergebnisse für die Jahre 2021-2024 berechnen.", style={'color': 'red'})
 
-        # --- Create Visualization and Table ---
         results_df = pd.DataFrame(yearly_results)
         
-        # Melt the DataFrame for easy plotting with Plotly Express
         plot_df = results_df.melt(
             id_vars=['Jahr'], 
             value_vars=['Spez. Erlös Spotmarkt (ct/kWh)', 'Spez. Erlös Marktwert (ct/kWh)', 'Spez. Erlös Marktprämie (ct/kWh)'],
@@ -184,6 +183,3 @@ def update_output(contents, filename):
     except Exception as e:
         print(e)
         return html.Div(f'Beim Verarbeiten der Datei ist ein Fehler aufgetreten. Stellen Sie sicher, dass es sich um eine .xlsx-Datei mit dem richtigen Format handelt. Fehler: {e}', style={'color': 'red'})
-
-if __name__ == '__main__':
-    app.run(debug=True)
