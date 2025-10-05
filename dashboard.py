@@ -102,7 +102,7 @@ def update_output(contents, filename):
     decoded = base64.b64decode(content_string)
 
     try:
-        df_pv_raw = pd.read_excel(io.BytesIO(decoded))
+        df_pv_raw = pd.read_csv(io.BytesIO(decoded))
         df_pv = preprocess_pv_data(df_pv_raw)
 
         if df_pv.empty:
@@ -183,3 +183,7 @@ def update_output(contents, filename):
     except Exception as e:
         print(e)
         return html.Div(f'Beim Verarbeiten der Datei ist ein Fehler aufgetreten. Stellen Sie sicher, dass es sich um eine .xlsx-Datei mit dem richtigen Format handelt. Fehler: {e}', style={'color': 'red'})
+
+# --- No longer need this for production ---
+# if __name__ == '__main__':
+#     app.run(debug=True)
